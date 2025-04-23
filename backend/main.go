@@ -104,6 +104,18 @@ func redirectHandler(c *gin.Context) {
 
 func main() {
 	r := gin.Default()
+
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
 	r.POST("/api/generate", generateLink)
 	r.GET("/t/:id", redirectHandler)
 	fmt.Println("Server started at http://localhost:8080")
