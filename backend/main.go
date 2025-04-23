@@ -35,8 +35,8 @@ func generateID() string {
 func sendTelegramMessage(message string) {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", telegramBotToken)
 	payload := map[string]string{
-		"chat_id": telegramChatID,
-		"text":    message,
+		"chat_id":    telegramChatID,
+		"text":       message,
 		"parse_mode": "Markdown",
 	}
 	jsonPayload, _ := json.Marshal(payload)
@@ -107,5 +107,5 @@ func main() {
 	r.POST("/api/generate", generateLink)
 	r.GET("/t/:id", redirectHandler)
 	fmt.Println("Server started at http://localhost:8080")
-	r.Run(":8080")
+	r.Run("0.0.0.0:8080")
 }

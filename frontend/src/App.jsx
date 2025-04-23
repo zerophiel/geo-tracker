@@ -5,7 +5,7 @@ export default function LinkGenerator() {
   const [generatedLink, setGeneratedLink] = useState("");
 
   const handleGenerate = async () => {
-    const res = await fetch("http://localhost:8080/api/generate", {
+    const res = await fetch("http://13.214.77.124:8080/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ decoyUrl }),
