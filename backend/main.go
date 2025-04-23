@@ -52,7 +52,7 @@ func generateLink(c *gin.Context) {
 
 	id := generateID()
 	linkStore[id] = data.DecoyURL
-	c.JSON(http.StatusOK, gin.H{"link": fmt.Sprintf("http://localhost:8080/t/%s", id)})
+	c.JSON(http.StatusOK, gin.H{"link": fmt.Sprintf("http://13.214.77.124:8080/t/%s", id)})
 }
 
 func redirectHandler(c *gin.Context) {
