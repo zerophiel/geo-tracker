@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState } from "react";
 
+
 export default function LinkGenerator() {
   const [decoyUrl, setDecoyUrl] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
