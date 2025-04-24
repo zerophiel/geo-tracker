@@ -73,10 +73,5 @@ export default function DeepTrackPage() {
     };
   }, [id]);
 
-  return (
-    <div style={{ padding: "2rem", textAlign: "center" }}>
-      <h1>Tracking...</h1>
-      <p>Redirecting shortly...</p>
-    </div>
-  );
+  return null;
 }
