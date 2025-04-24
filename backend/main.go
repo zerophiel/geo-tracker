@@ -98,6 +98,16 @@ func generateLink(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"link": fmt.Sprintf("%s/track/%s", linkPrefix, id)})
 }
 
+func getLinkInfo(c *gin.Context) {
+	id := c.Param("id")
+	link, exists := linkStore[id]
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Link not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"decoyUrl": link.DecoyURL})
+}
+
 func trackDeepData(c *gin.Context) {
 	var data TrackData
 	if err := c.BindJSON(&data); err != nil {
@@ -184,6 +194,7 @@ func main() {
 	r.POST("/api/generate", generateLink)
 	r.POST("/api/track", trackDeepData)
 	r.GET("/api/logs", viewLogs)
+	r.GET("/api/link/:id", getLinkInfo)
 	r.GET("/t/:id", redirectHandler)
 
 	fmt.Println("Server started at http://0.0.0.0:8080")
