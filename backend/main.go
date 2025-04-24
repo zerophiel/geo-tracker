@@ -103,7 +103,7 @@ func trackDeepData(c *gin.Context) {
 
 func redirectHandler(c *gin.Context) {
 	id := c.Param("id")
-	link, exists := linkStore[id]
+	_, exists := linkStore[id]
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Link not found"})
 		return
